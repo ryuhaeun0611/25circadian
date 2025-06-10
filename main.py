@@ -9,14 +9,25 @@ st.set_page_config(page_title="나의 생체리듬 집중력 리포트", layout=
 
 st.title("🌙 나의 생체리듬 집중력 리포트")
 
-# --- 사용자 입력 ---
-st.sidebar.header("🕒 당신의 수면 습관을 알려주세요")
+# --- 사용자 직접 입력 ---
+st.sidebar.header("🕒 당신의 수면 습관을 입력해주세요 (예: 23:30)")
 
-sleep_time = st.sidebar.time_input("취침 시간 (예: 23:30)", time(23, 30))
-wake_time = st.sidebar.time_input("기상 시간 (예: 07:00)", time(7, 0))
-school_time = st.sidebar.time_input("학교 시작 시간 (예: 08:00)", time(8, 0))
+sleep_time_str = st.sidebar.text_input("취침 시간", "23:30")
+wake_time_str = st.sidebar.text_input("기상 시간", "07:00")
+school_time_str = st.sidebar.text_input("학교 시작 시간", "08:00")
 
-# 수면 시간 계산
+def parse_time_str(t_str):
+    try:
+        return datetime.strptime(t_str, "%H:%M").time()
+    except ValueError:
+        st.error(f"❌ 시간 형식이 올바르지 않습니다: '{t_str}' (예: 23:30)")
+        st.stop()
+
+sleep_time = parse_time_str(sleep_time_str)
+wake_time = parse_time_str(wake_time_str)
+school_time = parse_time_str(school_time_str)
+
+# 수면 시간 계산 함수
 def calculate_sleep_duration(sleep_t, wake_t):
     sleep_dt = datetime.combine(datetime.today(), sleep_t)
     wake_dt = datetime.combine(datetime.today(), wake_t)
@@ -120,4 +131,3 @@ if school_hour < 9:
     st.warning("📌 학교 시작 시간이 뇌가 깨어나기 전입니다. 아침 루틴을 단순하게 유지해보세요.")
 else:
     st.success("👍 학교 시작 시간이 비교적 리듬과 잘 맞습니다!")
-
