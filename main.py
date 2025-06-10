@@ -1,64 +1,70 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-# 페이지 설정
+# --- 페이지 기본 설정 ---
 st.set_page_config(page_title="나의 생체리듬 집중력 리포트", layout="wide")
-st.title("🌙 나의 생체리듬 집중력 리포트 (Plotly 기반)")
+st.title("🌙 나의 생체리듬 집중력 리포트")
 
-# --- 사용자 직접 입력 ---
-st.sidebar.header("🕒 당신의 수면 습관을 입력해주세요 (예: 23:30)")
+# --- 서카디안 리듬 설명 ---
+with st.expander("🧬 서카디안 리듬(Circadian Rhythm)이란?"):
+    st.markdown("""
+    **서카디안 리듬**은 인간을 포함한 생물의 생체시계로, 약 24시간을 주기로 반복되는 생리적 변화입니다.  
+    이 리듬은 수면-기상 주기, 체온, 호르몬 분비, 집중력 등의 변화를 조절합니다.
 
-sleep_time_str = st.sidebar.text_input("취침 시간", "23:30")
-wake_time_str = st.sidebar.text_input("기상 시간", "07:00")
-school_time_str = st.sidebar.text_input("학교 시작 시간", "08:00")
+    - 🧠 **오전 9~11시**, **오후 4~6시**: 집중력이 가장 높아지는 시기  
+    - 💤 **오후 1~3시**: 졸림이 오는 시기로 낮잠이 권장됨  
+    - 🌙 **자정 이후~새벽 6시**: 깊은 수면과 회복에 적합한 시간
 
-def parse_time_str(t_str):
+    당신의 수면 습관이 이 리듬과 얼마나 잘 맞는지 확인해보세요!
+    """)
+
+# --- 사용자 입력 (수면 습관) ---
+st.sidebar.header("🕒 수면 습관 입력 (예: 23:30)")
+
+def parse_time(t_str):
     try:
         return datetime.strptime(t_str, "%H:%M").time()
-    except ValueError:
-        st.error(f"❌ 시간 형식이 올바르지 않습니다: '{t_str}' (예: 23:30)")
+    except:
+        st.error("❌ 시간 형식이 올바르지 않습니다. 예: 23:30")
         st.stop()
 
-sleep_time = parse_time_str(sleep_time_str)
-wake_time = parse_time_str(wake_time_str)
-school_time = parse_time_str(school_time_str)
+sleep_time = parse_time(st.sidebar.text_input("취침 시간", "23:30"))
+wake_time = parse_time(st.sidebar.text_input("기상 시간", "07:00"))
+school_time = parse_time(st.sidebar.text_input("학교 시작 시간", "08:00"))
 
-# 수면 시간 계산
+# --- 수면 시간 계산 ---
 def calculate_sleep_duration(sleep_t, wake_t):
-    sleep_dt = datetime.combine(datetime.today(), sleep_t)
-    wake_dt = datetime.combine(datetime.today(), wake_t)
+    today = datetime.today()
+    sleep_dt = datetime.combine(today, sleep_t)
+    wake_dt = datetime.combine(today, wake_t)
     if wake_dt <= sleep_dt:
         wake_dt += timedelta(days=1)
-    duration = wake_dt - sleep_dt
-    return duration.total_seconds() / 3600  # hours
+    return (wake_dt - sleep_dt).total_seconds() / 3600
 
 sleep_hours = calculate_sleep_duration(sleep_time, wake_time)
-st.sidebar.markdown(f"🛌 평균 수면 시간: **{sleep_hours:.1f}시간**")
+avg_sleep = 7.2  # KOSIS 청소년 평균 수면시간
 
-# --- 청소년 평균 수면시간과 비교 ---
-avg_sleep = 7.2  # KOSIS 기준
-st.sidebar.markdown(f"🔍 국내 청소년 평균 수면 시간: **{avg_sleep:.1f}시간**")
+st.sidebar.markdown(f"🛌 수면 시간: **{sleep_hours:.1f}시간**")
+st.sidebar.markdown(f"📊 청소년 평균: **{avg_sleep}시간**")
 
-# --- 수면시간 비교 그래프 (Plotly) ---
+# --- 수면시간 비교 (Plotly) ---
 st.subheader("📊 당신 vs 청소년 평균 수면 시간 비교")
 
 bar_fig = go.Figure(data=[
-    go.Bar(name='당신', x=['수면시간'], y=[sleep_hours], marker_color='cornflowerblue'),
-    go.Bar(name='청소년 평균', x=['수면시간'], y=[avg_sleep], marker_color='lightgreen')
+    go.Bar(name="당신", x=["수면 시간"], y=[sleep_hours], marker_color="cornflowerblue"),
+    go.Bar(name="청소년 평균", x=["수면 시간"], y=[avg_sleep], marker_color="lightgreen")
 ])
 bar_fig.update_layout(
-    yaxis=dict(title='수면 시간 (시간)', range=[0, 12]),
-    barmode='group',
-    title="🔎 수면시간 비교",
+    yaxis_title="수면 시간 (시간)",
+    barmode="group",
     height=400
 )
 st.plotly_chart(bar_fig)
 
-# --- 비교 해석 메시지 ---
-st.markdown("### 📝 수면 시간 비교 분석")
+# --- 해석 메시지 ---
+st.markdown("### 📝 수면 시간 분석")
 diff = sleep_hours - avg_sleep
 
 if diff > 0.5:
@@ -66,14 +72,13 @@ if diff > 0.5:
 elif diff < -0.5:
     st.warning(f"⚠️ 평균보다 {abs(diff):.1f}시간 덜 자고 있어요. 집중력 저하에 주의가 필요해요.")
 else:
-    st.info("📌 평균 수면 시간과 비슷해요. 유지하는 게 좋아요!")
+    st.info("📌 평균 수면 시간과 비슷해요. 꾸준히 유지하는 것이 좋아요!")
 
-# --- 서카디안 리듬 집중력 곡선 생성 ---
+# --- 서카디안 집중력 곡선 생성 ---
 def circadian_focus_curve():
     hours = list(range(24))
     times = [f"{h:02d}:00" for h in hours]
     focus = []
-
     for h in hours:
         if 9 <= h <= 11:
             score = 90 - abs(10 - h) * 10
@@ -84,22 +89,24 @@ def circadian_focus_curve():
         else:
             score = 30 if 0 <= h <= 6 else 50
         focus.append(score)
-
-    return pd.DataFrame({'시간': times, '집중력': focus})
+    return pd.DataFrame({"시간": times, "집중력": focus})
 
 focus_df = circadian_focus_curve()
 
-# --- Plotly 라인차트로 시각화 ---
-st.subheader("📈 당신의 하루 집중력 곡선 (서카디안 리듬 기준)")
+# --- Plotly 집중력 곡선 시각화 ---
+st.subheader("📈 서카디안 리듬 기반 집중력 곡선")
 
 focus_fig = go.Figure()
 
 focus_fig.add_trace(go.Scatter(
-    x=focus_df["시간"], y=focus_df["집중력"],
-    mode='lines+markers', name='집중력',
-    line=dict(color='royalblue')
+    x=focus_df["시간"],
+    y=focus_df["집중력"],
+    mode="lines+markers",
+    name="집중력",
+    line=dict(color="royalblue")
 ))
 
+# 학교 시작 시간 강조선
 focus_fig.add_vline(
     x=school_time.strftime("%H:%M"),
     line_dash="dash", line_color="red",
@@ -107,15 +114,33 @@ focus_fig.add_vline(
 )
 
 focus_fig.update_layout(
-    yaxis=dict(title="집중력 (0~100)", range=[0, 100]),
-    xaxis=dict(title="시간대", tickangle=45),
+    xaxis_title="시간대",
+    yaxis_title="집중력 (0~100)",
+    yaxis=dict(range=[0, 100]),
     height=450
 )
 st.plotly_chart(focus_fig)
 
-# --- 수면 평가 메시지 ---
-st.subheader("🧠 수면 분석 및 전략 제안")
+# --- 수면 전략 제안 ---
+st.subheader("💡 수면 전략 및 집중 팁")
 
 if sleep_hours >= 8:
     st.success("✅ 수면이 충분해요! 생체리듬이 잘 유지되고 있어요.")
-elif sleep_hours >= 6
+elif sleep_hours >= 6:
+    st.warning("⚠️ 수면이 약간 부족해요. 집중력 저하에 유의하세요.")
+else:
+    st.error("🚨 수면이 매우 부족합니다. 아침 집중력, 감정 조절, 기억력에 문제가 생길 수 있어요!")
+
+st.markdown("### 🔍 맞춤 전략 추천")
+if sleep_hours < 7:
+    st.markdown("- 💤 **낮잠 추천**: 오후 2~3시에 20분 낮잠을 시도해보세요.")
+st.markdown("- 🧠 **딥워크 시간**: 오전 10시, 오후 5시에 집중 업무를 배치해보세요.")
+st.markdown("- 📵 **수면 위생**: 취침 1시간 전에는 스마트폰 사용을 줄여보세요.")
+st.markdown("- 📚 **공부 추천 시간**: 저녁 8~10시, 신체가 안정되고 집중력이 높아져요.")
+
+# --- 학교 시간과 집중력 리듬 비교 ---
+school_hour = school_time.hour
+if school_hour < 9:
+    st.warning("📌 학교 시작 시간이 뇌가 깨어나기 전입니다. 아침 루틴을 단순하게 유지해보세요.")
+else:
+    st.success("👍 학교 시작 시간이 비교적 리듬과 잘 맞습니다!")
