@@ -1,7 +1,7 @@
 import streamlit as st
 import numpy as np
 import plotly.graph_objs as go
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # --- 앱 제목 및 설명 ---
 st.title("🧠 맞춤형 서카디안 리듬 시각화")
@@ -37,7 +37,7 @@ def wrap_hour(h):
 # --- 시간 계산 ---
 sleep_start = get_hour_float(sleep_time)
 sleep_end = get_hour_float(wake_time)
-wake_hour = sleep_end  # 기상 시간
+wake_hour = sleep_end
 
 # --- 서카디안 리듬 모델 ---
 base_hours = np.arange(0, 24, 0.1)
@@ -70,24 +70,7 @@ fig.add_trace(go.Scatter(
     name='수면 시간대'
 ))
 
-# 2. 멜라토닌 분비 시간 (수면 2시간 전 ~ 취침 시각)
-melatonin_start = wrap_hour(sleep_start - 2)
-melatonin_end = sleep_start
-melatonin_range = adjust_hours_range(melatonin_start, melatonin_end)
-fig.add_trace(go.Scatter(
-    x=melatonin_range + melatonin_range[::-1],
-    y=[-1.2]*len(melatonin_range) + [1.2]*len(melatonin_range),
-    fill='toself',
-    fillcolor='rgba(150, 0, 200, 0.1)',
-    line=dict(color='rgba(255,255,255,0)'),
-    hoverinfo="skip",
-    showlegend=True,
-    name='멜라토닌 분비 예상 시간'
-))
-
-# 3. 활동 추천 시간대
-# - 오전 집중 구간: 기상 후 2~4시간
-# - 오후 집중 구간: 기상 후 7~9시간
+# 2. 활동 추천 시간대 (기상 후 2~4시간, 7~9시간)
 focus_blocks = [(wake_hour + 2, wake_hour + 4), (wake_hour + 7, wake_hour + 9)]
 for i, (start, end) in enumerate(focus_blocks):
     focus_range = adjust_hours_range(wrap_hour(start), wrap_hour(end))
