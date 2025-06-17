@@ -2,15 +2,17 @@ import streamlit as st
 from datetime import datetime, timedelta
 import plotly.graph_objects as go
 
-st.set_page_config(page_title="렘수면 수면 시간 계산기", layout="centered")
+st.set_page_config(page_title="렘수면 기반 수면 계산기", layout="centered")
 st.title("🛌 렘수면 기반 수면 시간 계산기 + 시각화")
 
+# 모드 선택
 mode = st.radio("모드를 선택하세요:", ("자러 가는 시간 → 기상 시간 추천", "기상 시간 → 자러 가야 할 시간 추천"))
 
 # 시간 포맷 함수
 def format_time(dt):
     return dt.strftime("%H:%M")
 
+# Plotly 그래프 생성
 def create_sleep_chart(times, title):
     fig = go.Figure()
     for i, (label, time_obj) in enumerate(times):
@@ -31,14 +33,24 @@ def create_sleep_chart(times, title):
             ticktext=[f"{label} ({format_time(time)})" for label, time in times],
             autorange="reversed"
         ),
-        height=400,
+        height=60 * len(times) + 100,
         showlegend=False,
     )
     return fig
 
-# 모드 1: 자는 시간 → 기상 시간 추천
+# 수면 시간 → 기상 시간 추천
 if mode.startswith("자러"):
-    sleep_input = st.time_input("🕒 자러 가는 시간 선택", value=datetime.strptime("23:00", "%H:%M").time(), key="sleep_time")
+    sleep_input = st.time_input("🕒 자러 가는 시간 선택", value=datetime.strptime("23:00", "%H:%M").time(), key="sleep_time_input")
 
-    if st.button("기상 시간 계산"):
+    if st.button("기상 시간 계산", key="calculate_wake_time"):
         now = datetime.now()
+        sleep_time = now.replace(hour=sleep_input.hour, minute=sleep_input.minute, second=0, microsecond=0)
+
+        if sleep_time < now:
+            sleep_time += timedelta(days=1)
+
+        sleep_time += timedelta(minutes=15)  # 잠드는 데 걸리는 시간
+
+        st.subheader("추천 기상 시간 ⏰")
+        results = []
+        for i in range(3, 7):  # 3~6 주기
