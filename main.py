@@ -7,18 +7,6 @@ from datetime import datetime, timedelta
 st.set_page_config(page_title="나의 생체리듬 집중력 리포트", layout="wide")
 st.title("🌙 나의 생체리듬 집중력 리포트")
 
-# --- 서카디안 리듬 설명 ---
-with st.expander("🧬 서카디안 리듬(Circadian Rhythm)이란?"):
-    st.markdown("""
-    **서카디안 리듬**은 인간을 포함한 생물의 생체시계로, 약 24시간을 주기로 반복되는 생리적 변화입니다.  
-    이 리듬은 수면-기상 주기, 체온, 호르몬 분비, 집중력 등의 변화를 조절합니다.
-
-    - 🧠 **오전 9~11시**, **오후 4~6시**: 집중력이 가장 높아지는 시기  
-    - 💤 **오후 1~3시**: 졸림이 오는 시기로 낮잠이 권장됨  
-    - 🌙 **자정 이후~새벽 6시**: 깊은 수면과 회복에 적합한 시간
-
-    당신의 수면 습관이 이 리듬과 얼마나 잘 맞는지 확인해보세요!
-    """)
 
 # --- 사용자 입력 (수면 습관) ---
 st.sidebar.header("🕒 수면 습관 입력 (예: 23:30)")
@@ -74,52 +62,6 @@ elif diff < -0.5:
 else:
     st.info("📌 평균 수면 시간과 비슷해요. 꾸준히 유지하는 것이 좋아요!")
 
-# --- 서카디안 집중력 곡선 생성 ---
-def circadian_focus_curve():
-    hours = list(range(24))
-    times = [f"{h:02d}:00" for h in hours]
-    focus = []
-    for h in hours:
-        if 9 <= h <= 11:
-            score = 90 - abs(10 - h) * 10
-        elif 16 <= h <= 18:
-            score = 85 - abs(17 - h) * 10
-        elif 13 <= h <= 15:
-            score = 40
-        else:
-            score = 30 if 0 <= h <= 6 else 50
-        focus.append(score)
-    return pd.DataFrame({"시간": times, "집중력": focus})
-
-focus_df = circadian_focus_curve()
-
-# --- Plotly 집중력 곡선 시각화 ---
-st.subheader("📈 서카디안 리듬 기반 집중력 곡선")
-
-focus_fig = go.Figure()
-
-focus_fig.add_trace(go.Scatter(
-    x=focus_df["시간"],
-    y=focus_df["집중력"],
-    mode="lines+markers",
-    name="집중력",
-    line=dict(color="royalblue")
-))
-
-# 학교 시작 시간 강조선
-focus_fig.add_vline(
-    x=school_time.strftime("%H:%M"),
-    line_dash="dash", line_color="red",
-    annotation_text="학교 시작 시간", annotation_position="top right"
-)
-
-focus_fig.update_layout(
-    xaxis_title="시간대",
-    yaxis_title="집중력 (0~100)",
-    yaxis=dict(range=[0, 100]),
-    height=450
-)
-st.plotly_chart(focus_fig)
 
 # --- 수면 전략 제안 ---
 st.subheader("💡 수면 전략 및 집중 팁")
