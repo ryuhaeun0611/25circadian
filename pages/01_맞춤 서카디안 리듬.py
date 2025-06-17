@@ -1,71 +1,71 @@
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
+import plotly.graph_objs as go
 from datetime import datetime, timedelta
-import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
-import platform
-import os
 
-# 한글 폰트 설정
-if platform.system() == 'Windows':
-    plt.rcParams['font.family'] = 'Malgun Gothic'
-elif platform.system() == 'Darwin':
-    plt.rcParams['font.family'] = 'AppleGothic'
-else:
-    # Streamlit Cloud 또는 Linux
-    font_path = "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc"
-    if os.path.exists(font_path):
-        fm.fontManager.addfont(font_path)
-        font_name = fm.FontProperties(fname=font_path).get_name()
-        plt.rcParams['font.family'] = font_name
-    else:
-        st.warning("서버에 한글 폰트가 없어 글자가 깨질 수 있습니다.")
-
-plt.rcParams['axes.unicode_minus'] = False
-
-st.title("맞춤형 서카디안 리듬 시각화")
+st.title("🧠 맞춤형 서카디안 리듬 시각화")
 
 # --- 사용자 입력 ---
-st.subheader("당신의 수면 정보를 입력해주세요")
-sleep_time = st.time_input("취침 시간 (예: 23:00)", value=datetime.strptime("23:00", "%H:%M").time())
-wake_time = st.time_input("기상 시간 (예: 07:00)", value=datetime.strptime("07:00", "%H:%M").time())
+st.subheader("🛏️ 수면 정보 입력")
+sleep_time = st.time_input("취침 시간", value=datetime.strptime("23:00", "%H:%M").time())
+wake_time = st.time_input("기상 시간", value=datetime.strptime("07:00", "%H:%M").time())
 
-# 시간 계산
-def get_sleep_duration(start, end):
-    dt_start = datetime.combine(datetime.today(), start)
-    dt_end = datetime.combine(datetime.today(), end)
-    if dt_end < dt_start:
-        dt_end += timedelta(days=1)
-    return (dt_end - dt_start).seconds / 3600
+# --- 시간 계산 함수 ---
+def get_hour_float(t):
+    return t.hour + t.minute / 60
 
-sleep_duration = get_sleep_duration(sleep_time, wake_time)
+def adjust_hours_range(start, end):
+    """수면 시간이 자정을 넘길 경우를 고려한 시간 범위 반환"""
+    if end < start:
+        return [(h % 24) for h in np.arange(start, end + 24, 0.1)]
+    else:
+        return list(np.arange(start, end, 0.1))
 
-# --- 서카디안 리듬 모델 ---
-# 24시간 기준, 각성도 곡선 (간단한 코사인 함수 사용)
-hours = np.arange(0, 24, 0.1)
-# 기본 서카디안 리듬 (최고 각성 시점: 오후 3시)
-# wake_time을 기준으로 위상을 조정
-peak_hour = (wake_time.hour + wake_time.minute/60 + 7) % 24  # 보통 기상 후 7시간 후 최고조
-phase_shift = (15 - peak_hour)  # 15시는 기본 최고조
-adjusted_hours = (hours + phase_shift) % 24
+# --- 서카디안 리듬 모델 (cos 기반) ---
+base_hours = np.arange(0, 24, 0.1)
+# 사용자의 기상 시간 기준 위상 이동
+user_wake_hour = get_hour_float(wake_time)
+peak_shift = (user_wake_hour + 7) % 24  # 기상 후 7시간 후 최고 각성
 
-# 활동도(각성 수준): [-1, 1] 사이 값
-alertness = np.cos((adjusted_hours - 15) / 12 * np.pi)  # 최고 각성 시간은 15시 기준
+# 코사인 함수 기반 각성도: 최고점은 15시
+adjusted_hours = (base_hours - peak_shift + 15) % 24
+alertness = np.cos((adjusted_hours - 15) / 12 * np.pi)
 
-# --- 시각화 ---
-st.subheader("당신의 서카디안 리듬 그래프")
-fig, ax = plt.subplots()
-ax.plot(hours, alertness, label="서카디안 리듬 (각성도)", color="orange")
-ax.set_xlabel("시간 (시)")
-ax.set_ylabel("각성도 (Alertness)")
-ax.set_title("24시간 서카디안 리듬 예측")
-ax.set_xticks(np.arange(0, 25, 3))
-ax.set_ylim(-1.1, 1.1)
-ax.axvspan(sleep_time.hour + sleep_time.minute/60, 
-           wake_time.hour + wake_time.minute/60 if wake_time > sleep_time else wake_time.hour + wake_time.minute/60 + 24,
-           color='blue', alpha=0.2, label="수면 시간대")
+# --- Plotly 그래프 ---
+fig = go.Figure()
 
-ax.legend()
-st.pyplot(fig)
+# 각성도 곡선
+fig.add_trace(go.Scatter(
+    x=base_hours,
+    y=alertness,
+    mode='lines',
+    name='서카디안 리듬 (각성도)',
+    line=dict(color='orange')
+))
 
+# 수면 시간 음영 처리
+sleep_start = get_hour_float(sleep_time)
+sleep_end = get_hour_float(wake_time)
+
+shaded_hours = adjust_hours_range(sleep_start, sleep_end)
+
+fig.add_trace(go.Scatter(
+    x=shaded_hours + shaded_hours[::-1],
+    y=[-1.2]*len(shaded_hours) + [1.2]*len(shaded_hours),
+    fill='toself',
+    fillcolor='rgba(0, 100, 255, 0.2)',
+    line=dict(color='rgba(255,255,255,0)'),
+    hoverinfo="skip",
+    showlegend=True,
+    name='수면 시간대'
+))
+
+# --- 그래프 레이아웃 설정 ---
+fig.update_layout(
+    title="서카디안 리듬 예측 (맞춤형)",
+    xaxis=dict(title="시간 (시)", tickmode='array', tickvals=list(range(0, 25, 3))),
+    yaxis=dict(title="각성도", range=[-1.2, 1.2]),
+    template='plotly_white'
+)
+
+st.plotly_chart(fig, use_container_width=True)
