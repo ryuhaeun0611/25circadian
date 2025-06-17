@@ -2,6 +2,27 @@ import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+import platform
+import os
+
+# 한글 폰트 설정
+if platform.system() == 'Windows':
+    plt.rcParams['font.family'] = 'Malgun Gothic'
+elif platform.system() == 'Darwin':
+    plt.rcParams['font.family'] = 'AppleGothic'
+else:
+    # Streamlit Cloud 또는 Linux
+    font_path = "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc"
+    if os.path.exists(font_path):
+        fm.fontManager.addfont(font_path)
+        font_name = fm.FontProperties(fname=font_path).get_name()
+        plt.rcParams['font.family'] = font_name
+    else:
+        st.warning("서버에 한글 폰트가 없어 글자가 깨질 수 있습니다.")
+
+plt.rcParams['axes.unicode_minus'] = False
 
 st.title("맞춤형 서카디안 리듬 시각화")
 
