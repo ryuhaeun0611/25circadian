@@ -54,3 +54,30 @@ if mode.startswith("자러"):
         st.subheader("추천 기상 시간 ⏰")
         results = []
         for i in range(3, 7):  # 3~6 주기
+            wake_time = sleep_time + timedelta(minutes=90 * i)
+            st.markdown(f"- {i}주기: **{format_time(wake_time)}**")
+            results.append((f"{i}주기", wake_time))
+
+        fig = create_sleep_chart(results, "예상 기상 시간")
+        st.plotly_chart(fig, use_container_width=True)
+
+# 기상 시간 → 수면 시간 추천
+else:
+    wake_input = st.time_input("🕒 기상 시간 선택", value=datetime.strptime("07:00", "%H:%M").time(), key="wake_time_input")
+
+    if st.button("취침 시간 계산", key="calculate_sleep_time"):
+        now = datetime.now()
+        wake_time = now.replace(hour=wake_input.hour, minute=wake_input.minute, second=0, microsecond=0)
+
+        if wake_time < now:
+            wake_time += timedelta(days=1)
+
+        st.subheader("추천 취침 시간 🌙")
+        results = []
+        for i in range(6, 2, -1):  # 6~3 주기
+            sleep_time = wake_time - timedelta(minutes=90 * i) - timedelta(minutes=15)
+            st.markdown(f"- {i}주기: **{format_time(sleep_time)}**")
+            results.append((f"{i}주기", sleep_time))
+
+        fig = create_sleep_chart(results[::-1], "추천 취침 시간")
+        st.plotly_chart(fig, use_container_width=True)
